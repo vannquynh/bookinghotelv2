@@ -1,0 +1,193 @@
+:root {
+    /* Đổi sang bảng màu hồng nhạt: Light Pink Theme */
+    --primary-gradient: linear-gradient(135deg, #fbb6ce 0%, #f9a8d4 100%);
+    --accent-gold: #ec4899;
+    --dark-navy: #831843;
+    --soft-bg: #fdf2f8;
+    --white: #ffffff;
+    --success: #10b981;
+    --danger: #ef4444;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+    --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1);
+    --glass: rgba(255, 255, 255, 0.9);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Segoe UI', sans-serif; }
+
+body {
+    background-color: var(--soft-bg);
+    color: #831843;
+    line-height: 1.6;
+}
+
+/* --- AUTHENTICATION (Login/Register) --- */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover;
+    position: relative;
+}
+
+/* Hiệu ứng lớp phủ mờ phía sau box đăng nhập */
+.auth-container::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+
+.auth-box {
+    position: relative;
+    background: var(--glass);
+    padding: 3rem;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.auth-box h2 { 
+    margin-bottom: 2rem; 
+    color: var(--dark-navy); 
+    font-size: 28px; 
+    letter-spacing: -1px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fdfdfd;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus { 
+    border-color: #ec4899; 
+    outline: none; 
+    box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.15); 
+    background: white;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(236, 72, 153, 0.25);
+}
+
+.btn-primary:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 8px 15px rgba(236, 72, 153, 0.4);
+    filter: brightness(1.1);
+}
+
+/* --- NAVIGATION --- */
+.navbar {
+    background: white;
+    padding: 0.8rem 10%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    position: sticky; top: 0; z-index: 1000;
+}
+
+.logo {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #ec4899;
+    letter-spacing: 2px;
+}
+
+.btn-logout { 
+    background: #fef2f2; 
+    color: var(--danger); 
+    border: none;
+    padding: 10px 20px; 
+    border-radius: 10px; 
+    cursor: pointer; 
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-logout:hover { background: var(--danger); color: white; }
+
+/* --- ROOM CARDS --- */
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 35px;
+}
+
+.room-card {
+    background: var(--white);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    border: 1px solid #f1f5f9;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.room-card:hover { 
+    transform: translateY(-10px); 
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); 
+}
+
+.room-img-placeholder {
+    height: 220px;
+    background: #f1f5f9 url('https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80') center/cover;
+}
+
+.room-details { padding: 25px; }
+
+.room-name { 
+    font-size: 1.4rem; 
+    color: var(--dark-navy); 
+    margin-bottom: 8px;
+}
+
+.room-price { 
+    color: #ec4899; 
+    font-size: 1.5rem; 
+    font-weight: 900; 
+}
+
+/* Nút đặt phòng hiện đại */
+.btn-book {
+    width: 100%; 
+    padding: 12px; 
+    border: none; 
+    border-radius: 10px;
+    font-weight: 700; 
+    cursor: pointer; 
+    background: var(--dark-navy); 
+    color: white;
+    transition: 0.3s;
+}
+
+.btn-book:hover:not(:disabled) {
+    background: #ec4899;
+    transform: scale(1.02);
+}
+
+/* Badge trang trí */
+.badge { 
+    padding: 6px 12px; 
+    border-radius: 8px; 
+    font-size: 11px; 
+    letter-spacing: 0.5px;
+}

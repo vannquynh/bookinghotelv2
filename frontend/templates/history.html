@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử đặt phòng | CALESTIA HOTEL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS riêng cho trang Lịch sử */
+        .history-container { max-width: 850px; margin: 30px auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .history-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
+        .history-item:last-child { border-bottom: none; }
+        
+        .h-info strong { font-size: 18px; color: #2c3e50; }
+        .h-date { color: #7f8c8d; font-size: 14px; margin-top: 5px; }
+        
+        .h-price { text-align: right; min-width: 200px; }
+        .price-text { color: #e74c3c; font-weight: bold; font-size: 18px; }
+        
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-top: 5px; text-transform: uppercase; }
+        .st-paid { background-color: #d4edda; color: #155724; }
+        .st-pending { background-color: #fff3cd; color: #856404; }
+        .st-deposit { background-color: #cce5ff; color: #004085; } /* Màu cho đặt cọc */
+        .st-cash { background-color: #f8d7da; color: #721c24; } /* Màu cho tiền mặt */
+        .st-transfer { background-color: #e2e3e5; color: #383d41; } /* Màu cho chuyển khoản */
+
+        /* CSS cho các nút hành động */
+        .action-group { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; text-decoration: none; }
+        .btn-pay { background: #2ecc71; color: white; }
+        .btn-pay:hover { background: #27ae60; }
+        .btn-cancel { background: #ecf0f1; color: #7f8c8d; }
+        .btn-cancel:hover { background: #e74c3c; color: white; }
+
+        .btn-back { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #666; font-weight: bold; }
+        .btn-back:hover { color: #000; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">CALESTIA HOTEL</div>
+        <div class="user-info">
+            <span id="user-display">Checking...</span>
+            <button onclick="logout()" class="btn-logout">Đăng xuất</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="history-container">
+            <a href="/index.html" class="btn-back">← Quay lại trang chủ</a>
+            
+            <h2 style="border-bottom: 2px solid #f1c40f; padding-bottom: 10px; margin-bottom: 20px;">
+                📜 Lịch sử đặt phòng của bạn
+            </h2>
+
+            <div id="loading">Đang tải dữ liệu...</div>
+            <div id="history-list"></div>
+            <div id="empty-msg" style="display:none; text-align:center; color:#999; padding:20px;">
+                Bạn chưa có đơn đặt phòng nào.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = localStorage.getItem('user_name');
+        const token = localStorage.getItem('access_token');
+
+        console.log('DEBUG: currentUser =', currentUser);
+        console.log('DEBUG: token =', token ? 'exists' : 'missing');
+
+        if (!currentUser || !token) {
+            window.location.href = '/login.html';
+        } else {
+            document.getElementById('user-display').innerText = currentUser;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        async function loadHistory() {
+            const listDiv = document.getElementById('history-list');
+            const loadingDiv = document.getElementById('loading');
+            const emptyDiv = document.getElementById('empty-msg');
+
+            console.log('DEBUG: Fetching history with token:', token ? token.substring(0, 20) + '...' : 'missing');
+
+            try {
+                const res = await fetch(`http://localhost/api/booking/history`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.status === 401) { logout(); return; }
+
+                const history = await res.json();
+                loadingDiv.style.display = 'none';
+                listDiv.innerHTML = '';
+
+                if (history.length === 0) {
+                    emptyDiv.style.display = 'block';
+                    return;
+                }
+
+                history.forEach(item => {
+                    let statusClass = 'st-pending';
+                    let statusText = 'CHỜ THANH TOÁN';
+                    let actionButtons = '';
+
+                    // Phân loại trạng thái và tạo nút bấm
+                    if (item.status === 'PAID') {
+                        statusClass = 'st-paid';
+                        statusText = 'ĐÃ THANH TOÁN';
+                    } else if (item.status === 'DEPOSIT_PAID') {
+                        statusClass = 'st-deposit';
+                        statusText = 'ĐÃ ĐẶT CỌC (30%)';
+                        // Nút thanh toán nốt 70%
+                        actionButtons = `
+                            <div class="action-group">
+                                <button class="btn-action btn-pay" onclick="payNow(${item.id}, ${item.total_price * 0.7})">Trả nốt 70% 💳</button>
+                                <button class="btn-action btn-cancel" onclick="cancelBooking(${item.id})">Hủy cọc</button>
+                            </div>`;
+                    } else if (item.status === 'PENDING_CASH') {
+                        statusClass = 'st-cash';
+                        statusText = 'CHỜ THANH TOÁN TIỀN MẶT';
+                        actionButtons = `
+                            <div class="action-group">
+                                <button class="btn-action btn-cancel" onclick="cancelBooking(${item.id})">Hủy đơn</button>
+                            </div>`;
+                    } else if (item.status === 'PENDING_TRANSFER') {
+                        statusClass = 'st-transfer';
+                        statusText = 'CHỜ CHUYỂN KHOẢN';
+                        actionButtons = `
+                            <div class="action-group">
+                                <button class="btn-action btn-cancel" onclick="cancelBooking(${item.id})">Hủy đơn</button>
+                            </div>`;
+                    } else {
+                        // Trường hợp pending (Chờ thanh toán)
+                        actionButtons = `
+                            <div class="action-group">
+                                <button class="btn-action btn-pay" onclick="payNow(${item.id}, ${item.total_price})">Thanh toán ngay</button>
+                                <button class="btn-action btn-cancel" onclick="cancelBooking(${item.id})">Hủy đơn</button>
+                            </div>`;
+                    }
+                    
+                    listDiv.innerHTML += `
+                        <div class="history-item">
+                            <div class="h-info">
+                                <strong>${item.room_name}</strong> <small style="color:#aaa">#${item.id}</small>
+                                <div class="h-date">📅 ${item.check_in} ➝ ${item.check_out}</div>
+                            </div>
+                            <div class="h-price">
+                                <div class="price-text">${item.total_price.toLocaleString()} đ</div>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                loadingDiv.innerHTML = "<span style='color:red'>Lỗi kết nối Booking Service!</span>";
+            }
+        }
+
+        // Hàm thanh toán trực tiếp từ lịch sử
+        async function payNow(bookingId, amount) {
+            if (!confirm(`Xác nhận thanh toán ${amount.toLocaleString()} đ cho đơn #${bookingId}?`)) return;
+
+            try {
+                const res = await fetch('http://localhost/api/payment/pay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ booking_id: bookingId, amount_paid: amount })
+                });
+                
+                const result = await res.json();
+                alert(result.message);
+                loadHistory(); // Tải lại danh sách
+            } catch (e) {
+                alert("Lỗi thanh toán!");
+            }
+        }
+
+        // Hàm hủy đơn
+        async function cancelBooking(bookingId) {
+            if (!confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này?")) return;
+
+            try {
+                const res = await fetch(`http://localhost/api/booking/cancel/${bookingId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.ok) {
+                    alert("Đã hủy đơn thành công.");
+                    loadHistory();
+                } else {
+                    alert("Không thể hủy đơn vào lúc này.");
+                }
+            } catch (e) {
+                alert("Lỗi kết nối!");
+            }
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>

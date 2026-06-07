@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản trị viên | CALESTIA HOTEL</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .admin-panel { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .form-add { display: flex; gap: 10px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .btn-delete { background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        /* Booking Management Styles */
+        .booking-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .booking-table th, .booking-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .booking-table th { background: #f8f9fa; font-weight: bold; color: #831843; }
+        .booking-table tr:hover { background: #fdf2f8; }
+        .status-badge { padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .st-pending { background: #fff3cd; color: #856404; }
+        .st-paid { background: #d4edda; color: #155724; }
+        .st-deposit { background: #cce5ff; color: #004085; }
+        .st-cancelled { background: #f8d7da; color: #721c24; }
+        .st-cash { background: #f8d7da; color: #721c24; }
+        .st-transfer { background: #e2e3e5; color: #383d41; }
+        .btn-status { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+        .btn-confirm { background: #10b981; color: white; }
+        .btn-cancel { background: #ef4444; color: white; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; border: none; background: #f8f9fa; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        .tab-btn.active { background: linear-gradient(135deg, #fbb6ce 0%, #f9a8d4 100%); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <script>
+        // --- KIỂM TRA PHÂN QUYỀN CHẶT CHẼ ---
+        const token = localStorage.getItem('access_token');
+        const rawRole = localStorage.getItem('user_role');
+        
+        // Loại bỏ khoảng trắng hoặc viết hoa/thường không đồng nhất
+        const role = rawRole ? rawRole.trim().toLowerCase() : null;
+
+        console.log("DEBUG - Token:", token ? "Đã có" : "Trống");
+        console.log("DEBUG - Role gốc:", rawRole);
+        console.log("DEBUG - Role sau khi xử lý:", role);
+
+        if (!token || role !== 'admin') {
+            alert("⛔ Quyền truy cập bị từ chối! Vai trò của bạn là: " + (role || "Không xác định"));
+            window.location.href = '/index.html';
+        }
+    </script>
+
+    <nav class="navbar">
+        <div class="logo">CALESTIA HOTEL - ADMIN</div>
+        <div class="user-info">
+            <a href="/index.html" style="margin-right: 15px;">Về trang chủ</a>
+            <button onclick="logout()" class="btn-logout">Đăng xuất</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('rooms')">🏨 Quản lý phòng</button>
+            <button class="tab-btn" onclick="switchTab('bookings')">📋 Quản lý đặt phòng</button>
+        </div>
+
+        <!-- Room Management Tab -->
+        <div id="rooms-tab" class="tab-content active">
+            <div class="admin-panel">
+                <h2>Quản lý phòng nghỉ</h2>
+
+                <div class="form-add">
+                    <input type="text" id="new_name" placeholder="Tên phòng (VD: King Room)" style="flex: 2; padding: 8px;">
+                    <input type="number" id="new_price" placeholder="Giá tiền" style="flex: 1; padding: 8px;">
+                    <input type="text" id="new_description" placeholder="Mô tả chi tiết phòng" style="flex: 3; padding: 8px;">
+                    <button onclick="addRoom()" class="btn-primary">➕ Thêm ngay</button>
+                </div>
+
+                <div id="admin-room-list">
+                    <p>Đang tải dữ liệu...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Management Tab -->
+        <div id="bookings-tab" class="tab-content">
+            <div class="admin-panel">
+                <h2>Quản lý đặt phòng</h2>
+                <div id="admin-booking-list">
+                    <p>Đang tải dữ liệu...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sử dụng URL Gateway để gọi Room Service qua Nginx
+        const ROOM_API = "http://localhost/api/room/rooms";
+        const BOOKING_API = "http://localhost/api/booking/admin/bookings";
+
+        // Tab switching function
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            if (tabName === 'bookings') {
+                loadAdminBookings();
+            }
+        }
+
+        async function loadAdminRooms() {
+            try {
+                const res = await fetch(ROOM_API);
+                const rooms = await res.json();
+                const list = document.getElementById('admin-room-list');
+                list.innerHTML = '';
+                
+                rooms.forEach(room => {
+                    list.innerHTML += `
+                        <div class="room-item">
+                            <div>
+                                <strong>${room.name}</strong> - <span style="color:green">${room.price.toLocaleString()} VND</span>
+                            </div>
+                            <button class="btn-delete" onclick="deleteRoom(${room.id})">🗑️ Xóa</button>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error("Lỗi tải phòng:", e);
+                document.getElementById('admin-room-list').innerHTML = "Lỗi kết nối API Room!";
+            }
+        }
+
+        async function addRoom() {
+            const name = document.getElementById('new_name').value;
+            const price = document.getElementById('new_price').value;
+            const description = document.getElementById('new_description').value;
+
+            if(!name || !price) return alert("Vui lòng nhập đủ thông tin!");
+
+            try {
+                const res = await fetch(ROOM_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ name: name, price: price, description: description })
+                });
+
+                if (res.status === 403) return alert("⛔ Bạn không phải Admin (Backend từ chối)!");
+                if (res.ok) {
+                    alert("✅ Thêm thành công!");
+                    document.getElementById('new_name').value = '';
+                    document.getElementById('new_price').value = '';
+                    document.getElementById('new_description').value = '';
+                    loadAdminRooms();
+                } else {
+                    alert("Lỗi khi thêm phòng!");
+                }
+            } catch (e) { alert("Lỗi kết nối!"); }
+        }
+
+        async function deleteRoom(id) {
+            if(!confirm("Bạn có chắc muốn xóa phòng này không?")) return;
+
+            try {
+                const res = await fetch(`${ROOM_API}/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+
+                if (res.status === 403) return alert("⛔ Quyền Admin không hợp lệ!");
+                if (res.ok) {
+                    loadAdminRooms();
+                } else {
+                    alert("Lỗi khi xóa!");
+                }
+            } catch (e) { alert("Lỗi kết nối!"); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        async function loadAdminBookings() {
+            try {
+                const res = await fetch(BOOKING_API, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                const bookings = await res.json();
+                const list = document.getElementById('admin-booking-list');
+                list.innerHTML = '';
+
+                if (bookings.length === 0) {
+                    list.innerHTML = '<p>Chưa có đơn đặt phòng nào.</p>';
+                    return;
+                }
+
+                let tableHTML = `
+                    <table class="booking-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Khách hàng</th>
+                                <th>Phòng</th>
+                                <th>Ngày nhận</th>
+                                <th>Ngày trả</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                bookings.forEach(booking => {
+                    const statusClass = getStatusClass(booking.status);
+                    const statusText = getStatusText(booking.status);
+                    const actions = getBookingActions(booking);
+
+                    tableHTML += `
+                        <tr>
+                            <td>${booking.id}</td>
+                            <td>${booking.customer_name}</td>
+                            <td>${booking.room_name}</td>
+                            <td>${booking.check_in}</td>
+                            <td>${booking.check_out}</td>
+                            <td>${booking.total_price.toLocaleString()} VND</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${actions}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += '</tbody></table>';
+                list.innerHTML = tableHTML;
+            } catch (e) {
+                console.error("Lỗi tải đặt phòng:", e);
+                document.getElementById('admin-booking-list').innerHTML = "Lỗi kết nối API Booking!";
+            }
+        }
+
+        function getStatusClass(status) {
+            const statusMap = {
+                'PENDING': 'st-pending',
+                'PAID': 'st-paid',
+                'DEPOSIT_PAID': 'st-deposit',
+                'CANCELLED': 'st-cancelled',
+                'PENDING_CASH': 'st-cash',
+                'PENDING_TRANSFER': 'st-transfer'
+            };
+            return statusMap[status] || 'st-pending';
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'PENDING': 'Chờ thanh toán',
+                'PAID': 'Đã thanh toán',
+                'DEPOSIT_PAID': 'Đã đặt cọc',
+                'CANCELLED': 'Đã hủy',
+                'PENDING_CASH': 'Chờ tiền mặt',
+                'PENDING_TRANSFER': 'Chuyển khoản'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getBookingActions(booking) {
+            if (booking.status === 'CANCELLED') {
+                return '<span style="color: #999;">-</span>';
+            }
+
+            let actions = '';
+
+            if (booking.status === 'PENDING' || booking.status === 'PENDING_CASH' || booking.status === 'PENDING_TRANSFER') {
+                actions += `<button class="btn-status btn-confirm" onclick="updateBookingStatus(${booking.id}, 'PAID')">✅ Xác nhận</button>`;
+            }
+
+            if (booking.status !== 'CANCELLED') {
+                actions += `<button class="btn-status btn-cancel" onclick="updateBookingStatus(${booking.id}, 'CANCELLED')">❌ Hủy</button>`;
+            }
+
+            return actions;
+        }
+
+        async function updateBookingStatus(bookingId, newStatus) {
+            if (!confirm(`Bạn có chắc muốn thay đổi trạng thái đơn hàng #${bookingId} thành ${getStatusText(newStatus)}?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${BOOKING_API}/${bookingId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (res.ok) {
+                    alert('Cập nhật trạng thái thành công!');
+                    loadAdminBookings();
+                } else {
+                    const data = await res.json();
+                    alert('Lỗi: ' + data.message);
+                }
+            } catch (e) {
+                alert('Lỗi kết nối!');
+            }
+        }
+
+        loadAdminRooms();
+    </script>
+</body>
+</html>
