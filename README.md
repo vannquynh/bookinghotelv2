@@ -53,7 +53,8 @@ Hệ thống được chia thành các services độc lập:
 
 #### 3.1.2 Xem danh sách phòng
 - Hiển thị danh sách phòng với hình ảnh
-- Hiển thị giá phòng 
+- Hiển thị giá phòng
+- Click vào phòng để xem chi tiết trong modal
 - Hiển thị mô tả chi tiết từng hạng phòng:
   - Phòng Standard: 25m², tiện nghi cơ bản
   - Phòng Deluxe: 35m², view thành phố
@@ -61,6 +62,16 @@ Hệ thống được chia thành các services độc lập:
   - Phòng Tổng Thống: 80m², view toàn cảnh
 
 #### 3.1.3 Đặt phòng
+- Click vào phòng để xem chi tiết và chọn dịch vụ bổ sung
+- Chọn dịch vụ bổ sung với giá:
+  - 🥐 Breakfast Included – 150.000 VND
+  - 🚗 Airport Transfer – 300.000 VND
+  - 🛏️ Extra Bed – 120.000 VND
+  - ⏰ Early Check-in – 200.000 VND
+  - ⏰ Late Check-out – 200.000 VND
+  - 🍽️ Room Service – 100.000 VND
+  - 🏊 Swimming Pool – 100.000 VND
+  - 💪 Gym/Fitness Center – 100.000 VND
 - Chọn ngày nhận/trả phòng
 - Chọn phương thức thanh toán đa dạng:
   - Thanh toán toàn bộ (100%) - Trạng thái: PAID
@@ -69,6 +80,7 @@ Hệ thống được chia thành các services độc lập:
   - Chuyển khoản ngân hàng - Trạng thái: PENDING_TRANSFER (có mã QR)
   - Thẻ tín dụng/Ghi nợ - Trạng thái: PAID/DEPOSIT_PAID
 - Xác nhận đặt phòng với thông báo phù hợp
+- Tổng thanh toán bao gồm giá phòng và dịch vụ bổ sung
 
 #### 3.1.4 Lịch sử đặt phòng
 - Xem lịch sử đặt phòng cá nhân
@@ -168,8 +180,10 @@ Hệ thống được chia thành các services độc lập:
 ### 6.1 Thiết kế
 - **Màu sắc chủ đạo:** Hồng nhạt (#fdf2f8, #fbb6ce, #f9a8d4, #ec4899)
 - **Font chữ:** Poppins (hiện đại, dễ đọc)
-- **Logo:** CALESTIA HOTEL (viết hoa, màu hồng #ec4899)
+- **Logo:** CALESTIA HOTEL (gradient màu hồng #ec4899 → #f472b6 → #fb7185, font size 2.2rem, nổi bật)
 - **Layout:** Responsive, thân thiện người dùng
+- **Modal chi tiết phòng:** Hiển thị thông tin chi tiết khi click vào phòng
+- **Truncation mô tả:** Mô tả phòng hiển thị tối đa 2 dòng, click để xem đầy đủ
 
 ### 6.2 Các trang
 1. **Trang chủ (index.html):** Danh sách phòng, footer thông tin liên hệ
