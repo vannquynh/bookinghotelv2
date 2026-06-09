@@ -70,6 +70,60 @@
         .btn-success:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-outline-secondary { border-radius: 12px; padding: 10px; font-weight: 600; border: 2px solid #e2e8f0; }
         .room-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; }
+
+        /* Services Display Styles */
+        .services-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .services-display h5 {
+            color: #831843;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .service-item-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .service-name {
+            font-size: 14px;
+            color: #2d3436;
+        }
+
+        .service-price-display {
+            font-weight: 600;
+            color: #ec4899;
+            font-size: 14px;
+        }
+
+        .total-services-display {
+            margin-top: 15px;
+            padding: 12px;
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            border-radius: 8px;
+            text-align: right;
+            font-weight: 700;
+            color: #831843;
+        }
+
+        .no-services {
+            color: #64748b;
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -120,6 +174,15 @@
                             <label class="form-check-label" for="payCard">💳 Thẻ tín dụng/Ghi nợ</label>
                         </div>
 
+                    <!-- Services Display Section -->
+                    <div class="services-display" id="servicesSection">
+                        <h5>🎁 Dịch vụ bổ sung đã chọn</h5>
+                        <div id="servicesList"></div>
+                        <div class="total-services-display" id="totalServicesDisplay" style="display: none;">
+                            Tổng dịch vụ: <span id="totalServicesAmount">0 VND</span>
+                        </div>
+                    </div>
+
                         <!-- QR Code cho chuyển khoản -->
                         <div id="qrCodeSection" style="display: none; margin-top: 15px; text-align: center; padding: 15px; background: #f8f9fa; border-radius: 10px;">
                             <p style="margin-bottom: 10px; font-weight: bold; color: #831843;">📱 Quét mã QR để chuyển khoản nhanh</p>
@@ -152,12 +215,63 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room_id');
+        let selectedServices = [];
+
+        // Parse services from URL parameter
+        const servicesParam = urlParams.get('services');
+        if (servicesParam) {
+            try {
+                selectedServices = JSON.parse(decodeURIComponent(servicesParam));
+            } catch (e) {
+                console.error('Error parsing services:', e);
+            }
+        }
+
         if(roomId) {
             document.getElementById('display_room_id').innerText = "#" + roomId;
         } else {
             alert("Không tìm thấy phòng!");
             window.location.href = "/index.html";
         }
+
+        // Display selected services
+        function displayServices() {
+            const servicesList = document.getElementById('servicesList');
+            const totalServicesDisplay = document.getElementById('totalServicesDisplay');
+            const totalServicesAmount = document.getElementById('totalServicesAmount');
+
+            const serviceNames = {
+                'breakfast': '🥐 Breakfast Included – Bao gồm bữa sáng',
+                'airport_transfer': '🚗 Airport Transfer – Đưa đón sân bay',
+                'extra_bed': '🛏️ Extra Bed – Giường phụ',
+                'early_checkin': '⏰ Early Check-in – Nhận phòng sớm',
+                'late_checkout': '⏰ Late Check-out – Trả phòng muộn',
+                'room_service': '🍽️ Room Service – Phục vụ tại phòng',
+                'swimming_pool': '🏊 Swimming Pool – Hồ bơi',
+                'gym': '💪 Gym/Fitness Center – Phòng tập thể dục'
+            };
+
+            if (selectedServices.length === 0) {
+                servicesList.innerHTML = '<p class="no-services">Không có dịch vụ bổ sung nào được chọn</p>';
+                totalServicesDisplay.style.display = 'none';
+            } else {
+                let total = 0;
+                servicesList.innerHTML = selectedServices.map(service => {
+                    total += service.price;
+                    return `
+                        <div class="service-item-display">
+                            <span class="service-name">${serviceNames[service.service] || service.service}</span>
+                            <span class="service-price-display">${service.price === 0 ? 'Miễn phí' : service.price.toLocaleString() + ' VND'}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                totalServicesAmount.textContent = total.toLocaleString() + ' VND';
+                totalServicesDisplay.style.display = 'block';
+            }
+        }
+
+        displayServices();
 
         const today = new Date().toISOString().split('T')[0];
         const tomorrowDate = new Date();
@@ -202,7 +316,8 @@
                 room_id: roomId,
                 customer_name: fullName,
                 check_in: checkIn,
-                check_out: checkOut
+                check_out: checkOut,
+                services: selectedServices
             };
 
             try {
@@ -222,26 +337,33 @@
                 }
 
                 const result = await res.json();
-                
+
                 if (result.status === 'pending') {
                     // TÍNH TOÁN SỐ TIỀN HIỂN THỊ
                     let amountToPay = result.amount;
-                    let infoText = `Tổng số tiền: ${result.amount.toLocaleString()} VND`;
+                    let totalServicesCost = selectedServices.reduce((sum, service) => sum + service.price, 0);
+                    let totalAmount = result.amount + totalServicesCost;
+
+                    let infoText = `Giá phòng: ${result.amount.toLocaleString()} VND`;
+                    if (totalServicesCost > 0) {
+                        infoText += `\nDịch vụ bổ sung: ${totalServicesCost.toLocaleString()} VND`;
+                        infoText += `\nTổng cộng: ${totalAmount.toLocaleString()} VND`;
+                    }
                     let paymentMethodText = '';
 
                     if (payOption === 'deposit') {
-                        amountToPay = result.amount * 0.3; // Tính 30%
-                        infoText = `Số tiền đặt cọc (30%): ${amountToPay.toLocaleString()} VND (Tổng đơn: ${result.amount.toLocaleString()} VND)`;
+                        amountToPay = totalAmount * 0.3; // Tính 30% trên tổng
+                        infoText = `Giá phòng: ${result.amount.toLocaleString()} VND\nDịch vụ bổ sung: ${totalServicesCost.toLocaleString()} VND\nTổng cộng: ${totalAmount.toLocaleString()} VND\n\nSố tiền đặt cọc (30%): ${amountToPay.toLocaleString()} VND`;
                         paymentMethodText = 'Đặt cọc';
                     } else if (payOption === 'cash') {
                         paymentMethodText = 'Tiền mặt (tại quầy)';
-                        infoText = `Thanh toán bằng tiền mặt tại quầy: ${result.amount.toLocaleString()} VND`;
+                        infoText = `Giá phòng: ${result.amount.toLocaleString()} VND\nDịch vụ bổ sung: ${totalServicesCost.toLocaleString()} VND\nTổng thanh toán tại quầy: ${totalAmount.toLocaleString()} VND`;
                     } else if (payOption === 'transfer') {
                         paymentMethodText = 'Chuyển khoản';
-                        infoText = `Chuyển khoản: ${result.amount.toLocaleString()} VND`;
+                        infoText = `Giá phòng: ${result.amount.toLocaleString()} VND\nDịch vụ bổ sung: ${totalServicesCost.toLocaleString()} VND\nTổng chuyển khoản: ${totalAmount.toLocaleString()} VND`;
                     } else if (payOption === 'card') {
                         paymentMethodText = 'Thẻ tín dụng/Ghi nợ';
-                        infoText = `Thanh toán thẻ: ${result.amount.toLocaleString()} VND`;
+                        infoText = `Giá phòng: ${result.amount.toLocaleString()} VND\nDịch vụ bổ sung: ${totalServicesCost.toLocaleString()} VND\nTổng thanh toán thẻ: ${totalAmount.toLocaleString()} VND`;
                     } else {
                         paymentMethodText = 'Thanh toán toàn bộ';
                     }

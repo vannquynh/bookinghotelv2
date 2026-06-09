@@ -107,10 +107,15 @@ body {
 }
 
 .logo {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: #ec4899;
-    letter-spacing: 2px;
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 3px;
+    text-shadow: 2px 2px 4px rgba(236, 72, 153, 0.2);
+    filter: drop-shadow(0 2px 4px rgba(236, 72, 153, 0.3));
 }
 
 .btn-logout { 
